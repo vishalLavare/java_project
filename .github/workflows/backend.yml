@@ -103,7 +103,26 @@ jobs:
             echo "Pulling image: $IMAGE_URI"
             sudo docker pull "$IMAGE_URI"
 
+            # Ensure shared Docker network exists
             sudo docker network create student-network || true
+
+            # Deploy MySQL container if not present
+            if ! sudo docker ps -a --format '{{.Names}}' | grep -q "^mysql$"; then
+              echo "Starting MySQL database container..."
+              sudo docker run -d \
+                --name mysql \
+                --network student-network \
+                --restart always \
+                -e MYSQL_ROOT_PASSWORD=vishal \
+                -e MYSQL_DATABASE=student_db \
+                -p 3306:3306 \
+                -v mysql_data:/var/lib/mysql \
+                mysql:8.0
+            else
+              echo "Ensuring MySQL container is active on student-network..."
+              sudo docker start mysql || true
+              sudo docker network connect student-network mysql 2>/dev/null || true
+            fi
 
             sudo docker stop student-api || true
             sudo docker rm student-api || true
