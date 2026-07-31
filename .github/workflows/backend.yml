@@ -38,14 +38,19 @@ jobs:
 
       - name: Tag and Push Docker Image
         env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          if [ -z "$ECR_REPOSITORY" ]; then
-            echo "Error: ECR_REPOSITORY secret is not configured in GitHub Secrets!"
-            exit 1
+          REPO="${ECR_REPOSITORY:-student-management-api}"
+          if [[ "$REPO" == *"."* ]]; then
+            IMAGE_URI="$REPO:latest"
+          else
+            IMAGE_URI="$ECR_REGISTRY/$REPO:latest"
           fi
-          docker tag student-management-api:latest $ECR_REPOSITORY:latest
-          docker push $ECR_REPOSITORY:latest
+          echo "Tagging image as: $IMAGE_URI"
+          docker tag student-management-api:latest "$IMAGE_URI"
+          echo "Pushing image to ECR..."
+          docker push "$IMAGE_URI"
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
@@ -54,22 +59,31 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
+            REGISTRY="${{ secrets.ECR_REGISTRY }}"
+            REPO="${{ secrets.ECR_REPOSITORY }}"
 
-            aws ecr get-login-password \
-            --region us-east-1 | docker login \
-            --username AWS \
-            --password-stdin \
-            ${{ secrets.ECR_REGISTRY }}
+            if [ -z "$REGISTRY" ]; then
+              REGISTRY="<aws_account_id>.dkr.ecr.us-east-1.amazonaws.com"
+            fi
 
-            docker pull \
-            ${{ secrets.ECR_REPOSITORY }}:latest
+            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$REGISTRY"
+
+            if [[ "$REPO" == *"."* ]]; then
+              IMAGE_URI="$REPO:latest"
+            elif [ -n "$REPO" ]; then
+              IMAGE_URI="$REGISTRY/$REPO:latest"
+            else
+              IMAGE_URI="$REGISTRY/student-management-api:latest"
+            fi
+
+            echo "Pulling image: $IMAGE_URI"
+            docker pull "$IMAGE_URI"
 
             docker stop student-api || true
-
             docker rm student-api || true
 
             docker run -d \
-            --name student-api \
-            --restart always \
-            -p 8080:8080 \
-            ${{ secrets.ECR_REPOSITORY }}:latest
+              --name student-api \
+              --restart always \
+              -p 8080:8080 \
+              "$IMAGE_URI"
