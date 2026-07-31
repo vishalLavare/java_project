@@ -41,7 +41,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          REPO="${ECR_REPOSITORY:-student-management-api}"
+          REPO="${ECR_REPOSITORY:-my-repo}"
           if [[ "$REPO" == *"."* ]]; then
             IMAGE_URI="$REPO:latest"
           else
@@ -63,7 +63,7 @@ jobs:
             REPO="${{ secrets.ECR_REPOSITORY }}"
 
             if [ -z "$REGISTRY" ]; then
-              REGISTRY="<aws_account_id>.dkr.ecr.us-east-1.amazonaws.com"
+              REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
             fi
 
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$REGISTRY"
@@ -73,7 +73,7 @@ jobs:
             elif [ -n "$REPO" ]; then
               IMAGE_URI="$REGISTRY/$REPO:latest"
             else
-              IMAGE_URI="$REGISTRY/student-management-api:latest"
+              IMAGE_URI="$REGISTRY/my-repo:latest"
             fi
 
             echo "Pulling image: $IMAGE_URI"
