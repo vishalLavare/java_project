@@ -43,9 +43,9 @@ jobs:
         run: |
           REPO="${ECR_REPOSITORY:-my-repo}"
           if [[ "$REPO" == *"."* ]]; then
-            IMAGE_URI="$REPO:latest"
+            IMAGE_URI="$REPO:backend-latest"
           else
-            IMAGE_URI="$ECR_REGISTRY/$REPO:latest"
+            IMAGE_URI="$ECR_REGISTRY/$REPO:backend-latest"
           fi
           echo "Tagging image as: $IMAGE_URI"
           docker tag student-management-api:latest "$IMAGE_URI"
@@ -73,16 +73,15 @@ jobs:
               REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
             fi
 
-            # Fix DNS resolution issues on EC2 & Docker daemon
+            # Use AWS VPC DNS Resolver (169.254.169.253)
             sudo systemctl restart systemd-resolved || true
-            if ! grep -q "8.8.8.8" /etc/resolv.conf; then
-              echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
-              echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf > /dev/null
+            if ! grep -q "169.254.169.253" /etc/resolv.conf; then
+              echo "nameserver 169.254.169.253" | sudo tee /etc/resolv.conf > /dev/null
             fi
 
-            if [ ! -f /etc/docker/daemon.json ] || ! grep -q "8.8.8.8" /etc/docker/daemon.json 2>/dev/null; then
+            if [ ! -f /etc/docker/daemon.json ] || ! grep -q "169.254.169.253" /etc/docker/daemon.json 2>/dev/null; then
               sudo mkdir -p /etc/docker
-              echo '{"dns": ["8.8.8.8", "1.1.1.1"]}' | sudo tee /etc/docker/daemon.json > /dev/null
+              echo '{"dns": ["169.254.169.253", "8.8.8.8"]}' | sudo tee /etc/docker/daemon.json > /dev/null
               sudo systemctl restart docker
             fi
 
@@ -116,11 +115,11 @@ jobs:
             aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin "$REGISTRY"
 
             if [[ "$REPO" == *"."* ]]; then
-              IMAGE_URI="$REPO:latest"
+              IMAGE_URI="$REPO:backend-latest"
             elif [ -n "$REPO" ]; then
-              IMAGE_URI="$REGISTRY/$REPO:latest"
+              IMAGE_URI="$REGISTRY/$REPO:backend-latest"
             else
-              IMAGE_URI="$REGISTRY/my-repo:latest"
+              IMAGE_URI="$REGISTRY/my-repo:backend-latest"
             fi
 
             echo "Pulling image: $IMAGE_URI"
