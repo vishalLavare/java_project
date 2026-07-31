@@ -55,7 +55,7 @@ export default function App() {
         const data = await studentApi.getAllStudents();
         setStudents(data);
       } else {
-        setError('Unable to connect to Spring Boot REST API on http://localhost:8080');
+        setError('Unable to connect to Spring Boot REST API service');
       }
     } catch (err) {
       setError(err.message || 'Failed to fetch student data from backend');
