@@ -74,9 +74,18 @@ jobs:
               REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
             fi
 
+            # Wait for apt lock if another apt process is running
+            wait_for_apt() {
+              while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
+                echo "Waiting for apt lock..."
+                sleep 3
+              done
+            }
+
             # Auto-install Docker if missing
             if ! command -v docker &> /dev/null; then
               echo "Docker not found. Installing Docker..."
+              wait_for_apt
               sudo apt-get update -y && sudo apt-get install -y docker.io
               sudo usermod -aG docker ubuntu || true
             fi
@@ -84,10 +93,15 @@ jobs:
             # Auto-install AWS CLI if missing
             if ! command -v aws &> /dev/null; then
               echo "AWS CLI not found. Installing AWS CLI..."
+              wait_for_apt
               sudo apt-get update -y && sudo apt-get install -y awscli
             fi
 
-            aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$REGISTRY"
+            # Ensure docker daemon is active
+            sudo systemctl start docker || true
+
+            echo "Logging in to ECR..."
+            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin "$REGISTRY"
 
             if [[ "$REPO" == *"."* ]]; then
               IMAGE_URI="$REPO:frontend-latest"
@@ -98,12 +112,13 @@ jobs:
             fi
 
             echo "Pulling image: $IMAGE_URI"
-            docker pull "$IMAGE_URI"
+            sudo docker pull "$IMAGE_URI"
 
-            docker stop student-ui || true
-            docker rm student-ui || true
+            sudo docker stop student-ui || true
+            sudo docker rm student-ui || true
 
-            docker run -d \
+            echo "Starting container student-ui..."
+            sudo docker run -d \
               --name student-ui \
               --restart always \
               -p 80:80 \
