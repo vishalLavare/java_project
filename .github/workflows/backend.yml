@@ -36,15 +36,16 @@ jobs:
           docker build \
           -t student-management-api .
 
-      - name: Tag Docker Image
+      - name: Tag and Push Docker Image
+        env:
+          ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
         run: |
-          docker tag student-management-api:latest \
-          ${{ secrets.ECR_REPOSITORY }}:latest
-
-      - name: Push Docker Image
-        run: |
-          docker push \
-          ${{ secrets.ECR_REPOSITORY }}:latest
+          if [ -z "$ECR_REPOSITORY" ]; then
+            echo "Error: ECR_REPOSITORY secret is not configured in GitHub Secrets!"
+            exit 1
+          fi
+          docker tag student-management-api:latest $ECR_REPOSITORY:latest
+          docker push $ECR_REPOSITORY:latest
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2

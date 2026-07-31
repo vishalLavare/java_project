@@ -34,18 +34,19 @@ jobs:
       - name: Build Docker Image
         run: |
           docker build \
-          --build-arg VITE_API_URL=${{ secrets.FRONTEND_ECR_REPOSITORY }} \
+          --build-arg VITE_API_URL=${{ secrets.VITE_API_URL || 'http://localhost:8080' }} \
           -t student-management-ui .
 
-      - name: Tag Docker Image
+      - name: Tag and Push Docker Image
+        env:
+          FRONTEND_ECR_REPOSITORY: ${{ secrets.FRONTEND_ECR_REPOSITORY }}
         run: |
-          docker tag student-management-ui:latest \
-          ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest
-
-      - name: Push Docker Image
-        run: |
-          docker push \
-          ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest
+          if [ -z "$FRONTEND_ECR_REPOSITORY" ]; then
+            echo "Error: FRONTEND_ECR_REPOSITORY secret is not configured in GitHub Secrets!"
+            exit 1
+          fi
+          docker tag student-management-ui:latest $FRONTEND_ECR_REPOSITORY:frontend-latest
+          docker push $FRONTEND_ECR_REPOSITORY:frontend-latest
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
