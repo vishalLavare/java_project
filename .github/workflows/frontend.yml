@@ -42,11 +42,13 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           FRONTEND_ECR_REPOSITORY: ${{ secrets.FRONTEND_ECR_REPOSITORY }}
         run: |
-          REPO="${FRONTEND_ECR_REPOSITORY:-myfrontend}"
-          if [[ "$REPO" == *"."* ]]; then
-            IMAGE_URI="$REPO:frontend-latest"
+          RAW_REPO=$(echo "${FRONTEND_ECR_REPOSITORY}" | sed -e 's|^https://||' -e 's|^http://||')
+          if [ -z "$RAW_REPO" ]; then
+            IMAGE_URI="$ECR_REGISTRY/myfrontend:frontend-latest"
+          elif [[ "$RAW_REPO" == *"/"* ]]; then
+            IMAGE_URI="$RAW_REPO:frontend-latest"
           else
-            IMAGE_URI="$ECR_REGISTRY/$REPO:frontend-latest"
+            IMAGE_URI="$ECR_REGISTRY/$RAW_REPO:frontend-latest"
           fi
           echo "Tagging image as: $IMAGE_URI"
           docker tag student-management-ui:latest "$IMAGE_URI"
@@ -68,16 +70,18 @@ jobs:
             export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$HOME/.local/bin:$PATH"
 
             REGISTRY="${{ secrets.ECR_REGISTRY }}"
-            REPO="${{ secrets.FRONTEND_ECR_REPOSITORY }}"
-
+            REGISTRY=$(echo "$REGISTRY" | sed -e 's|^https://||' -e 's|^http://||' -e 's|/.*||')
             if [ -z "$REGISTRY" ]; then
               REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
             fi
 
-            # Use AWS VPC DNS Resolver (169.254.169.253)
+            # Fix DNS resolution on EC2 if needed
             sudo systemctl restart systemd-resolved || true
             if ! grep -q "169.254.169.253" /etc/resolv.conf; then
-              echo "nameserver 169.254.169.253" | sudo tee /etc/resolv.conf > /dev/null
+              echo "nameserver 169.254.169.253" | sudo tee -a /etc/resolv.conf > /dev/null
+            fi
+            if ! grep -q "8.8.8.8" /etc/resolv.conf; then
+              echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
             fi
 
             if [ ! -f /etc/docker/daemon.json ] || ! grep -q "169.254.169.253" /etc/docker/daemon.json 2>/dev/null; then
@@ -112,15 +116,18 @@ jobs:
             # Ensure docker daemon is active
             sudo systemctl start docker || true
 
-            echo "Logging in to ECR..."
+            echo "Logging in to ECR server: $REGISTRY..."
             aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin "$REGISTRY"
 
-            if [[ "$REPO" == *"."* ]]; then
-              IMAGE_URI="$REPO:frontend-latest"
-            elif [ -n "$REPO" ]; then
-              IMAGE_URI="$REGISTRY/$REPO:frontend-latest"
-            else
+            RAW_REPO="${{ secrets.FRONTEND_ECR_REPOSITORY }}"
+            RAW_REPO=$(echo "$RAW_REPO" | sed -e 's|^https://||' -e 's|^http://||')
+
+            if [ -z "$RAW_REPO" ]; then
               IMAGE_URI="$REGISTRY/myfrontend:frontend-latest"
+            elif [[ "$RAW_REPO" == *"/"* ]]; then
+              IMAGE_URI="$RAW_REPO:frontend-latest"
+            else
+              IMAGE_URI="$REGISTRY/$RAW_REPO:frontend-latest"
             fi
 
             echo "Pulling image: $IMAGE_URI"
