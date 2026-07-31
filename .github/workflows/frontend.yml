@@ -55,16 +55,36 @@ jobs:
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: us-east-1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION
           script: |
+            export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$HOME/.local/bin:$PATH"
+
             REGISTRY="${{ secrets.ECR_REGISTRY }}"
             REPO="${{ secrets.FRONTEND_ECR_REPOSITORY }}"
 
             if [ -z "$REGISTRY" ]; then
               REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
+            fi
+
+            # Auto-install Docker if missing
+            if ! command -v docker &> /dev/null; then
+              echo "Docker not found. Installing Docker..."
+              sudo apt-get update -y && sudo apt-get install -y docker.io
+              sudo usermod -aG docker ubuntu || true
+            fi
+
+            # Auto-install AWS CLI if missing
+            if ! command -v aws &> /dev/null; then
+              echo "AWS CLI not found. Installing AWS CLI..."
+              sudo apt-get update -y && sudo apt-get install -y awscli
             fi
 
             aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin "$REGISTRY"
