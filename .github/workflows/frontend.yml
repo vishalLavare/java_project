@@ -1,51 +1,73 @@
-# name: Frontend Deploy
+name: Frontend Deploy
 
-# on:
-#   push:
-#     branches:
-#       - main
-#     paths:
-#       - 'frontend/**'
-#       - '.github/workflows/frontend.yml'
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend.yml'
 
-# jobs:
-#   deploy:
-#     runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-#     defaults:
-#       run:
-#         working-directory: frontend
+    defaults:
+      run:
+        working-directory: frontend
 
-#     steps:
-#       - name: Checkout
-#         uses: actions/checkout@v4
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-#       - name: Setup Node
-#         uses: actions/setup-node@v4
-#         with:
-#           node-version: 20
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-region: us-east-1
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-#       - name: Install Dependencies
-#         run: npm install
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
 
-#       - name: Build React App
-#         env:
-#           VITE_API_URL: ${{ secrets.VITE_API_URL }}
-#         run: npm run build
+      - name: Build Docker Image
+        run: |
+          docker build \
+          --build-arg VITE_API_URL=${{ secrets.FRONTEND_ECR_REPOSITORY }} \
+          -t student-management-ui .
 
-#       - name: Configure AWS Credentials
-#         uses: aws-actions/configure-aws-credentials@v4
-#         with:
-#           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-#           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-#           aws-region: ap-south-1
+      - name: Tag Docker Image
+        run: |
+          docker tag student-management-ui:latest \
+          ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest
 
-#       - name: Upload to S3
-#         run: |
-#           aws s3 sync dist s3://${{ secrets.S3_BUCKET }} --delete
+      - name: Push Docker Image
+        run: |
+          docker push \
+          ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest
 
-#       - name: Invalidate CloudFront
-#         run: |
-#           aws cloudfront create-invalidation \
-#           --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
-#           --paths "/*"
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+
+            aws ecr get-login-password \
+            --region us-east-1 | docker login \
+            --username AWS \
+            --password-stdin ${{ secrets.ECR_REGISTRY}}
+
+            docker pull ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest
+
+            docker stop student-ui || true
+
+            docker rm student-ui || true
+
+            docker run -d \
+            --name student-ui \
+            --restart always \
+            -p 80:80 \
+            ${{ secrets.FRONTEND_ECR_REPOSITORY }}:frontend-latest

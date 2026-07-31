@@ -9,20 +9,61 @@ Designed with a clean 3-tier layered architecture, persistence via **Spring Data
 ## 🏗️ Architecture Overview
 
 ```text
-┌─────────────────────────┐        HTTP / JSON        ┌─────────────────────────┐
-│     React 19 Frontend    │  <───────────────────>   │  Spring Boot REST API   │
-│   (Vite + Lucide Icons) │    http://localhost:8080  │ (Java 21 + Tomcat 8080) │
-└─────────────────────────┘                           └────────────┬────────────┘
-                                                                   │
-                                                          Spring Data JPA
-                                                                   │
-                                                ┌──────────────────┴──────────────────┐
-                                                ▼                                     ▼
-                                       ┌─────────────────┐                   ┌─────────────────┐
-                                       │ H2 In-Memory DB │                   │  MySQL Database │
-                                       │ (Default Dev)   │                   │ (Profile: mysql)│
-                                       └─────────────────┘                   └─────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                         Docker Compose Network                         │
+│                                                                        │
+│   ┌──────────────────────┐  HTTP / JSON  ┌─────────────────────────┐   │
+│   │  Frontend Container  │ ------------> │    Backend Container    │   │
+│   │   (Nginx + React)    │  (Port 8080)  │  (Spring Boot + Java)   │   │
+│   │   Port 3000 -> 80    │               │      Port 8080          │   │
+│   └──────────────────────┘               └────────────┬────────────┘   │
+│                                                       │                │
+│                                                   Spring JPA           │
+│                                                       │                │
+│                                                       ▼                │
+│                                          ┌─────────────────────────┐   │
+│                                          │     MySQL Container     │   │
+│                                          │   (Database: student_db)│   │
+│                                          │      Port 3306          │   │
+│                                          └─────────────────────────┘   │
+└────────────────────────────────────────────────────────────────────────┘
 ```
+
+---
+
+## 🐳 Docker & Containerized Environment
+
+The application is fully containerized using **Docker** and **Docker Compose**. You can launch the entire 3-tier system (React Frontend, Spring Boot Backend, and MySQL Database) with a single command.
+
+### Containers Overview
+
+| Container | Image / Base | Service Name | Host Port | Description |
+|---|---|---|---|---|
+| **Frontend** | `nginx:alpine` (Multi-stage `node:20-alpine`) | `frontend` | `3000` | Nginx web server hosting React 19 production build |
+| **Backend** | `eclipse-temurin:21-jre` (Multi-stage `maven:3.9-alpine`) | `backend` | `8080` | Spring Boot REST API application running Java 21 |
+| **Database** | `mysql:8.0` | `db` | `3306` | MySQL database storing `student_db` persistent records |
+
+### Running with Docker Compose
+
+1. **Ensure Docker Desktop is running**.
+2. **Launch all containers**:
+   ```bash
+   docker compose up --build -d
+   ```
+3. **Access the application**:
+   - **Frontend UI**: [http://localhost:3000](http://localhost:3000)
+   - **Backend API**: [http://localhost:8080/students](http://localhost:8080/students)
+   - **MySQL Database**: `localhost:3306` (User: `root`, Password: `vishal`, Database: `student_db`)
+
+4. **Stop & remove containers**:
+   ```bash
+   docker compose down
+   ```
+   To remove persistent database volumes as well:
+   ```bash
+   docker compose down -v
+   ```
+
 
 ---
 
