@@ -69,26 +69,8 @@ jobs:
           script: |
             export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$HOME/.local/bin:$PATH"
 
-            REGISTRY="${{ secrets.ECR_REGISTRY }}"
-            REGISTRY=$(echo "$REGISTRY" | sed -e 's|^https://||' -e 's|^http://||' -e 's|/.*||')
-            if [ -z "$REGISTRY" ]; then
-              REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
-            fi
-
-            # Fix DNS resolution on EC2 if needed
-            sudo systemctl restart systemd-resolved || true
-            if ! grep -q "169.254.169.253" /etc/resolv.conf; then
-              echo "nameserver 169.254.169.253" | sudo tee -a /etc/resolv.conf > /dev/null
-            fi
-            if ! grep -q "8.8.8.8" /etc/resolv.conf; then
-              echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
-            fi
-
-            if [ ! -f /etc/docker/daemon.json ] || ! grep -q "169.254.169.253" /etc/docker/daemon.json 2>/dev/null; then
-              sudo mkdir -p /etc/docker
-              echo '{"dns": ["169.254.169.253", "8.8.8.8"]}' | sudo tee /etc/docker/daemon.json > /dev/null
-              sudo systemctl restart docker
-            fi
+            ECR_REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
+            IMAGE_URI="$ECR_REGISTRY/myfrontend:frontend-latest"
 
             # Wait for apt lock if another apt process is running
             wait_for_apt() {
@@ -113,22 +95,11 @@ jobs:
               sudo apt-get update -y && sudo apt-get install -y awscli
             fi
 
-            # Ensure docker daemon is active
+            # Ensure docker daemon is running
             sudo systemctl start docker || true
 
-            echo "Logging in to ECR server: $REGISTRY..."
-            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin "$REGISTRY"
-
-            RAW_REPO="${{ secrets.FRONTEND_ECR_REPOSITORY }}"
-            RAW_REPO=$(echo "$RAW_REPO" | sed -e 's|^https://||' -e 's|^http://||')
-
-            if [ -z "$RAW_REPO" ]; then
-              IMAGE_URI="$REGISTRY/myfrontend:frontend-latest"
-            elif [[ "$RAW_REPO" == *"/"* ]]; then
-              IMAGE_URI="$RAW_REPO:frontend-latest"
-            else
-              IMAGE_URI="$REGISTRY/$RAW_REPO:frontend-latest"
-            fi
+            echo "Logging in to Amazon ECR..."
+            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 411109262881.dkr.ecr.us-east-1.amazonaws.com
 
             echo "Pulling image: $IMAGE_URI"
             sudo docker pull "$IMAGE_URI"
