@@ -103,17 +103,20 @@ jobs:
             echo "Pulling image: $IMAGE_URI"
             sudo docker pull "$IMAGE_URI"
 
+            sudo docker network create student-network || true
+
             sudo docker stop student-api || true
             sudo docker rm student-api || true
 
             echo "Starting container student-api..."
             sudo docker run -d \
               --name student-api \
+              --network student-network \
               --restart always \
               --add-host=host.docker.internal:host-gateway \
+              -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=mysql \
-              -e SPRING_DATASOURCE_URL="jdbc:mysql://host.docker.internal:3306/student_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
+              -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql:3306/student_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
               -e SPRING_DATASOURCE_USERNAME=root \
               -e SPRING_DATASOURCE_PASSWORD=vishal \
-              -p 8080:8080 \
               "$IMAGE_URI"
