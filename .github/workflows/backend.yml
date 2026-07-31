@@ -73,6 +73,19 @@ jobs:
               REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
             fi
 
+            # Fix DNS resolution issues on EC2 & Docker daemon
+            sudo systemctl restart systemd-resolved || true
+            if ! grep -q "8.8.8.8" /etc/resolv.conf; then
+              echo "nameserver 8.8.8.8" | sudo tee -a /etc/resolv.conf > /dev/null
+              echo "nameserver 1.1.1.1" | sudo tee -a /etc/resolv.conf > /dev/null
+            fi
+
+            if [ ! -f /etc/docker/daemon.json ] || ! grep -q "8.8.8.8" /etc/docker/daemon.json 2>/dev/null; then
+              sudo mkdir -p /etc/docker
+              echo '{"dns": ["8.8.8.8", "1.1.1.1"]}' | sudo tee /etc/docker/daemon.json > /dev/null
+              sudo systemctl restart docker
+            fi
+
             # Wait for apt lock if another apt process is running
             wait_for_apt() {
               while sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1; do
