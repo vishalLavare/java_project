@@ -139,3 +139,4 @@ jobs:
               -e SPRING_DATASOURCE_USERNAME=root \
               -e SPRING_DATASOURCE_PASSWORD=vishal \
               "$IMAGE_URI"
+              
