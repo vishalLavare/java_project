@@ -23,7 +23,7 @@ jobs:
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-region: us-east-1
+          aws-region: ap-south-1
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
@@ -60,7 +60,7 @@ jobs:
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: us-east-1
+          AWS_DEFAULT_REGION: ap-south-1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
@@ -69,7 +69,7 @@ jobs:
           script: |
             export PATH="/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/snap/bin:$HOME/.local/bin:$PATH"
 
-            ECR_REGISTRY="411109262881.dkr.ecr.us-east-1.amazonaws.com"
+            ECR_REGISTRY="411109262881.dkr.ecr.ap-south-1.amazonaws.com"
             IMAGE_URI="$ECR_REGISTRY/myfrontend:frontend-latest"
 
             # Wait for apt lock if another apt process is running
@@ -99,7 +99,7 @@ jobs:
             sudo systemctl start docker || true
 
             echo "Logging in to Amazon ECR..."
-            aws ecr get-login-password --region us-east-1 | sudo docker login --username AWS --password-stdin 411109262881.dkr.ecr.us-east-1.amazonaws.com
+            aws ecr get-login-password --region ap-south-1 | sudo docker login --username AWS --password-stdin 411109262881.dkr.ecr.ap-south-1.amazonaws.com
 
             echo "Pulling image: $IMAGE_URI"
             sudo docker pull "$IMAGE_URI"
