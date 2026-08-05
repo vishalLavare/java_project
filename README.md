@@ -1,7 +1,5 @@
 # 🎓 Student Management System (Full-Stack)
 
-🚀 **[View Live Demo](https://vishallavare.github.io/java_project/)**
-
 A modern, full-stack **Student Management Application** built with a **Java 21 & Spring Boot 3** REST API backend and a **React 19 & Vite** frontend.
 
 Designed with a clean 3-tier layered architecture, persistence via **Spring Data JPA** (supporting **H2 In-Memory DB** and **MySQL**), and a responsive glassmorphism UI with real-time health monitoring, live search, and full CRUD operations.
