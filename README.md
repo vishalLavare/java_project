@@ -6,6 +6,7 @@ A modern, full-stack **Student Management Application** built with a **Java 21 &
 
 Designed with a clean 3-tier layered architecture, persistence via **Spring Data JPA** (supporting **H2 In-Memory DB** and **MySQL**), and a responsive glassmorphism UI with real-time health monitoring, live search, and full CRUD operations.
 
+
 ---
 
 ## 🏗️ Architecture Overview
