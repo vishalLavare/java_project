@@ -328,6 +328,49 @@ curl -X POST http://localhost:8080/students \
 
 ---
 
+## 🧪 Automation Testing
+
+The application includes a comprehensive 3-tier **Automation Testing Framework** covering Backend REST APIs, Frontend UI Components, and End-to-End (E2E) Browser workflows.
+
+### 🧪 Testing Architecture
+
+| Test Tier | Scope & Focus | Framework / Libraries | Test Location | Run Command |
+|---|---|---|---|---|
+| **1. Backend API & Unit** | REST Controllers, Service Logic, Exception Handling & Validation | **JUnit 5**, **Spring Boot Test**, **MockMvc**, **Mockito** | `backend/src/test/java/` | `mvn test` (in `backend/`) |
+| **2. Frontend Component** | React DOM Rendering, State Filtering, Modal Dialogs & Mock API | **Vitest**, **React Testing Library**, **jsdom** | `frontend/src/App.test.jsx` | `npm test` (in `frontend/`) |
+| **3. End-to-End (E2E)** | Full Browser User Workflows & Live UI Interaction | **Playwright** (Chromium) | `frontend/e2e/student-management.spec.js` | `npx playwright test` (in `frontend/`) |
+
+---
+
+### 🚀 Running the Automated Test Suites
+
+#### 1️⃣ Backend Automated Tests (JUnit 5 + MockMvc)
+```bash
+cd backend
+mvn test
+```
+* **Coverage**: Tests `GET`, `POST`, `PUT`, `DELETE` endpoints, status codes (`200 OK`, `201 Created`, `204 No Content`, `400 Bad Request`, `404 Not Found`), validation rules, and service business logic.
+
+#### 2️⃣ Frontend Component Tests (Vitest + React Testing Library)
+```bash
+cd frontend
+npm test
+```
+* **Coverage**: Tests component rendering, live table search filter, add student modal trigger, and API offline error fallback UI states.
+
+#### 3️⃣ End-to-End UI Automation Tests (Playwright)
+```bash
+cd frontend
+npx playwright test
+```
+* **Coverage**: Launches headless Chromium browser, verifies dashboard headers and metric cards, opens modals, and fills input forms automatically.
+* To view the HTML visual test report after running Playwright:
+  ```bash
+  npx playwright show-report
+  ```
+
+---
+
 ## 📦 Production Packaging
 
 ### Build Backend JAR
