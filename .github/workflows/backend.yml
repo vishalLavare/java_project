@@ -113,7 +113,7 @@ jobs:
                 --name mysql \
                 --network student-network \
                 --restart always \
-                -e MYSQL_ROOT_PASSWORD=vishal \
+                -e MYSQL_ROOT_PASSWORD="${{ secrets.MYSQL_PASSWORD}}" \
                 -e MYSQL_DATABASE=student_db \
                 -p 3306:3306 \
                 -v mysql_data:/var/lib/mysql \
@@ -136,6 +136,6 @@ jobs:
               -p 8080:8080 \
               -e SPRING_PROFILES_ACTIVE=mysql \
               -e SPRING_DATASOURCE_URL="jdbc:mysql://mysql:3306/student_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" \
-              -e SPRING_DATASOURCE_USERNAME=root \
-              -e SPRING_DATASOURCE_PASSWORD=vishal \
+              -e SPRING_DATASOURCE_USERNAME="${{ secrets.MYSQL_USERNAME}}" \
+              -e SPRING_DATASOURCE_PASSWORD="${{ secrets.MYSQL_PASSWORD}}" \
               "$IMAGE_URI"
